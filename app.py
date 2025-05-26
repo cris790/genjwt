@@ -139,65 +139,109 @@ def login(uid, access_token, open_id, platform_type):
 
 @app.route("/api/get_jwt", methods=["GET"])
 def get_jwt():
+    base_response = {
+        "api": "https://client.us.freefiremobile.com",
+        "region": "BR",
+        "status": "live"
+    }
+    
     guest_uid = request.args.get("guest_uid")
     guest_password = request.args.get("guest_password")
     if guest_uid and guest_password:
         uid, access_token, open_id, err_flag = check_guest(guest_uid, guest_password)
         if err_flag:
-            return jsonify({
-                "success": False,
+            error_response = base_response.copy()
+            error_response.update({
+                "status": "error",
                 "message": "invalid guest_uid, guest_password"
-            }), 400
+            })
+            return jsonify(error_response), 400
+            
         if not access_token or not open_id:
-            return jsonify({
-                "success": False,
+            error_response = base_response.copy()
+            error_response.update({
+                "status": "error",
                 "message": "unregistered or banned account.",
                 "detail": "jwt not found in response."
-            }), 500
+            })
+            return jsonify(error_response), 500
+            
         jwt_token = login(uid, access_token, open_id, 4)
         if isinstance(jwt_token, dict):
-            return jsonify(jwt_token), 400
+            error_response = base_response.copy()
+            error_response.update({
+                "status": "error",
+                **jwt_token
+            })
+            return jsonify(error_response), 400
+            
         if not jwt_token:
-            return jsonify({
-                "success": False,
+            error_response = base_response.copy()
+            error_response.update({
+                "status": "error",
                 "message": "unregistered or banned account.",
                 "detail": "jwt not found in response."
-            }), 500
-        return jsonify({"success": True, "BearerAuth": jwt_token})
+            })
+            return jsonify(error_response), 500
+            
+        success_response = base_response.copy()
+        success_response.update({"token": jwt_token})
+        return jsonify(success_response)
 
     access_token = request.args.get("access_token")
     if access_token:
         token_data = get_token_inspect_data(access_token)
         if not token_data:
-            return jsonify({
+            error_response = base_response.copy()
+            error_response.update({
+                "status": "error",
                 "error": "INVALID_TOKEN",
                 "message": "AccessToken invalid."
-            }), 400
+            })
+            return jsonify(error_response), 400
+            
         open_id = token_data["open_id"]
         platform_type = token_data["platform"]
         uid = str(token_data["uid"])
         jwt_token = login(uid, access_token, open_id, platform_type)
         if isinstance(jwt_token, dict):
-            return jsonify(jwt_token), 400
+            error_response = base_response.copy()
+            error_response.update({
+                "status": "error",
+                **jwt_token
+            })
+            return jsonify(error_response), 400
+            
         if not jwt_token:
-            return jsonify({
-                "success": False,
+            error_response = base_response.copy()
+            error_response.update({
+                "status": "error",
                 "message": "unregistered or banned account.",
                 "detail": "jwt not found in response."
-            }), 500
-        return jsonify({"success": True, "BearerAuth": jwt_token})
+            })
+            return jsonify(error_response), 500
+            
+        success_response = base_response.copy()
+        success_response.update({"token": jwt_token})
+        return jsonify(success_response)
 
-    return jsonify({
-        "success": False,
+    error_response = base_response.copy()
+    error_response.update({
+        "status": "error",
         "message": "missing access_token (or guest_uid + guest_password)"
-    }), 400
+    })
+    return jsonify(error_response), 400
 
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({"detail": "Not Found"}), 404
+    return jsonify({
+        "api": "https://client.us.freefiremobile.com",
+        "region": "BR",
+        "status": "error",
+        "detail": "Not Found"
+    }), 404
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     log_info(f"Iniciando o serviço na porta {port}")
     app.run(host="0.0.0.0", port=port)
-
