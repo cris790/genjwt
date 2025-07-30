@@ -113,7 +113,7 @@ def login(uid, access_token, open_id, platform_type):
         "Expect": "100-continue",
         "X-GA": "v1 1",
         "X-Unity-Version": "2018.4.11f1",
-        "ReleaseVersion": "OB49",
+        "ReleaseVersion": "OB50",
         "Content-Length": str(len(encrypted_data))
     }
     try:
